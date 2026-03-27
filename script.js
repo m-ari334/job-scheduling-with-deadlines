@@ -42,6 +42,22 @@ function parseInput() {
     .filter(j=>j&&!isNaN(j.profit)&&!isNaN(j.deadline));
 }
 
+function randomInput() {
+  const names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const count = Math.floor(Math.random() * 5) + 4; // 4–8 jobs
+  const maxDeadline = Math.floor(Math.random() * 3) + 3; // deadline range 3–5
+  const jobs = [];
+  for (let i = 0; i < count; i++) {
+    const name = names[i];
+    const profit = Math.floor(Math.random() * 91) + 10; // profit 10–100
+    const deadline = Math.floor(Math.random() * maxDeadline) + 1; // deadline 1–maxDeadline
+    jobs.push(`${name},${profit},${deadline}`);
+  }
+  document.getElementById('inp').value = jobs.join('\n');
+  resetAll();
+  buildSortSteps(parseInput());
+}
+
 /* ============================================================
    ALGORITHM
 ============================================================ */
@@ -347,16 +363,17 @@ function drawCompare(){
   const ctx=canvas.getContext('2d');
   canvas.width=canvas.offsetWidth||640;canvas.height=210;
   const W=canvas.width,H=canvas.height;
-  const PAD={t:20,r:140,b:40,l:55};
+  const PAD={t:20,r:200,b:40,l:55};
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#122619';ctx.fillRect(0,0,W,H);
   const maxN=20;const ns=[...Array(maxN)].map((_,i)=>i+1);
   const algs=[
-    {lbl:'Greedy O(n²)',vals:ns.map(n=>n*n),col:'#22c55e'},
-    {lbl:'Greedy O(n log n)',vals:ns.map(n=>n*Math.log2(n||1)),col:'#86efac'},
-    {lbl:'DP O(n log n)',vals:ns.map(n=>n*Math.log2(n||1)*1.6),col:'#f472b6'},
-    {lbl:'Brute Force 2ⁿ',vals:ns.map(n=>Math.pow(2,n)),col:'#f87171'},
+    {lbl:'Greedy Scheduling O(n²)',     vals:ns.map(n=>n*n),                       col:'#22c55e'},
+    {lbl:'Greedy + Union-Find O(n log n)',vals:ns.map(n=>n*Math.log2(n||1)),        col:'#86efac'},
+    {lbl:'Binary Search O(log n)',       vals:ns.map(n=>Math.log2(n||1)),           col:'#f472b6'},
+    {lbl:'D&C Merge Sort O(n log n)',    vals:ns.map(n=>n*Math.log2(n||1)*1.4),     col:'#fbbf24'},
+    {lbl:'D&C Quick Sort O(n log n) avg',vals:ns.map(n=>n*Math.log2(n||1)*1.1),    col:'#fb923c'},
   ];
-  const maxV=Math.min(Math.pow(2,maxN),800000);
+  const maxV=maxN*maxN;
   const xS=n=>PAD.l+(n-1)/(maxN-1)*(W-PAD.l-PAD.r);
   const yS=v=>H-PAD.b-Math.min(v/maxV,1)*(H-PAD.t-PAD.b);
   ctx.strokeStyle='#1e4028';ctx.lineWidth=1;
@@ -367,7 +384,7 @@ function drawCompare(){
     ctx.stroke();
   });
   algs.forEach((a,i)=>{
-    const lx=W-PAD.r+10,ly=28+i*30;
+    const lx=W-PAD.r+10,ly=22+i*34;
     ctx.fillStyle=a.col;ctx.fillRect(lx,ly,14,3);
     ctx.font='11px Arial, sans-serif';ctx.textAlign='left';ctx.fillText(a.lbl,lx+20,ly+4);
   });
