@@ -17,6 +17,7 @@ const PRESETS = [
 let jobs=[], steps=[], cur=-1, playing=false, pt=null, spd=1;
 let sortSteps=[], sortCur=0, sortTmr=null, searchTmr=null;
 
+
 /* ============================================================
    INIT
 ============================================================ */
@@ -319,77 +320,112 @@ function hlPseudo(i){
 function drawGrowth(){
   const canvas=document.getElementById('gc'); if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  canvas.width=canvas.offsetWidth||640; canvas.height=250;
+  canvas.width=canvas.offsetWidth||640; canvas.height=260;
   const W=canvas.width,H=canvas.height;
-  const PAD={t:20,r:70,b:40,l:55};
+  const PAD={t:24,r:80,b:44,l:60};
   const maxN=+document.getElementById('gn').value;
   document.getElementById('gn-lbl').textContent=maxN;
   const ns=[...Array(maxN)].map((_,i)=>i+1);
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#122619'; ctx.fillRect(0,0,W,H);
+
   const showN2=document.getElementById('cb-n2').checked;
   const showNL=document.getElementById('cb-nl').checked;
-  const showN=document.getElementById('cb-n').checked;
-  const maxV=showN2?maxN*maxN:showNL?maxN*Math.log2(maxN):maxN;
-  const xS=n=>PAD.l+(n-1)/(maxN-1)*(W-PAD.l-PAD.r);
-  const yS=v=>H-PAD.b-(v/maxV)*(H-PAD.t-PAD.b);
-  // Grid
+  const showN =document.getElementById('cb-n').checked;
+
+  // Always scale to the largest visible curve so all lines fit
+  let maxV = 1;
+  if(showN)  maxV = Math.max(maxV, maxN);
+  if(showNL) maxV = Math.max(maxV, maxN * Math.log2(Math.max(maxN,2)));
+  if(showN2) maxV = Math.max(maxV, maxN * maxN);
+
+  const xS=n=>PAD.l+(n-1)/Math.max(maxN-1,1)*(W-PAD.l-PAD.r);
+  const yS=v=>H-PAD.b-Math.min(v/maxV,1)*(H-PAD.t-PAD.b);
+
+  // Grid lines + y labels
   ctx.strokeStyle='#1e4028'; ctx.lineWidth=1;
   for(let i=0;i<=5;i++){
     const y=H-PAD.b-i/5*(H-PAD.t-PAD.b);
     ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(W-PAD.r,y);ctx.stroke();
     ctx.fillStyle='#3d5a47';ctx.font='10px Arial, sans-serif';ctx.textAlign='right';
-    ctx.fillText(Math.round(maxV*i/5),PAD.l-4,y+3);
+    ctx.fillText(Math.round(maxV*i/5),PAD.l-5,y+3);
   }
+
   function line(vals,color,lbl){
     ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5;
     ns.forEach((n,i)=>{const x=xS(n),y=yS(vals[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.stroke();
+    // Label at the rightmost point
+    const lastY=yS(vals[maxN-1]);
     ctx.fillStyle=color;ctx.font='bold 11px Arial, sans-serif';ctx.textAlign='left';
-    ctx.fillText(lbl,xS(maxN)+4,yS(vals[maxN-1])+4);
+    ctx.fillText(lbl,W-PAD.r+4,Math.min(Math.max(lastY,PAD.t+8),H-PAD.b-4));
   }
-  if(showN)  line(ns.map(n=>n),'#22c55e','n');
-  if(showNL) line(ns.map(n=>n*Math.log2(n||1)),'#f472b6','n log n');
-  if(showN2) line(ns.map(n=>n*n),'#f87171','n²');
+
+  if(showN)  line(ns.map(n=>n),                          '#22c55e','n');
+  if(showNL) line(ns.map(n=>n*Math.log2(Math.max(n,2))), '#f472b6','n log n');
+  if(showN2) line(ns.map(n=>n*n),                        '#f87171','n²');
+
+  // x-axis labels
   ctx.fillStyle='#7a9e88';ctx.font='11px Arial, sans-serif';ctx.textAlign='center';
   for(let n=1;n<=maxN;n+=Math.max(1,Math.floor(maxN/8)))
     ctx.fillText(n,xS(n),H-PAD.b+14);
   ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);
   ctx.fillText('operations',0,0);ctx.restore();
-  ctx.fillText('n (input size)',W/2,H-5);
+  ctx.fillText('n (input size)',W/2,H-4);
 }
 function drawCompare(){
   const canvas=document.getElementById('cc');if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  canvas.width=canvas.offsetWidth||640;canvas.height=210;
+  canvas.width=canvas.offsetWidth||640;canvas.height=240;
   const W=canvas.width,H=canvas.height;
-  const PAD={t:20,r:200,b:40,l:55};
+  const PAD={t:24,r:210,b:44,l:60};
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#122619';ctx.fillRect(0,0,W,H);
   const maxN=20;const ns=[...Array(maxN)].map((_,i)=>i+1);
+
+  // Use realistic operation counts with multipliers that visually separate the curves
   const algs=[
-    {lbl:'Greedy Scheduling O(n²)',     vals:ns.map(n=>n*n),                       col:'#22c55e'},
-    {lbl:'Greedy + Union-Find O(n log n)',vals:ns.map(n=>n*Math.log2(n||1)),        col:'#86efac'},
-    {lbl:'Binary Search O(log n)',       vals:ns.map(n=>Math.log2(n||1)),           col:'#f472b6'},
-    {lbl:'D&C Merge Sort O(n log n)',    vals:ns.map(n=>n*Math.log2(n||1)*1.4),     col:'#fbbf24'},
-    {lbl:'D&C Quick Sort O(n log n) avg',vals:ns.map(n=>n*Math.log2(n||1)*1.1),    col:'#fb923c'},
+    {lbl:'Greedy Scheduling O(n²)',      vals:ns.map(n=>n*n),                              col:'#f87171'},
+    {lbl:'D&C Merge Sort O(n log n)',    vals:ns.map(n=>n*Math.log2(Math.max(n,2))*2.5),   col:'#fbbf24'},
+    {lbl:'Greedy + Union-Find O(n log n)',vals:ns.map(n=>n*Math.log2(Math.max(n,2))*1.5),  col:'#86efac'},
+    {lbl:'D&C Quick Sort O(n log n) avg',vals:ns.map(n=>n*Math.log2(Math.max(n,2))*1.0),  col:'#fb923c'},
+    {lbl:'Binary Search O(log n)',        vals:ns.map(n=>Math.log2(Math.max(n,2))*3),       col:'#f472b6'},
   ];
-  const maxV=maxN*maxN;
+
+  const maxV = maxN * maxN; // n² at maxN is the ceiling
   const xS=n=>PAD.l+(n-1)/(maxN-1)*(W-PAD.l-PAD.r);
   const yS=v=>H-PAD.b-Math.min(v/maxV,1)*(H-PAD.t-PAD.b);
+
+  // Grid lines + y-axis labels
   ctx.strokeStyle='#1e4028';ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){const y=H-PAD.b-i/4*(H-PAD.t-PAD.b);ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(W-PAD.r,y);ctx.stroke();}
+  for(let i=0;i<=4;i++){
+    const y=H-PAD.b-i/4*(H-PAD.t-PAD.b);
+    ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(W-PAD.r,y);ctx.stroke();
+    ctx.fillStyle='#3d5a47';ctx.font='10px Arial, sans-serif';ctx.textAlign='right';
+    ctx.fillText(Math.round(maxV*i/4),PAD.l-5,y+3);
+  }
+
+  // Draw curves
   algs.forEach(a=>{
-    ctx.beginPath();ctx.strokeStyle=a.col;ctx.lineWidth=2;
+    ctx.beginPath();ctx.strokeStyle=a.col;ctx.lineWidth=2.5;
     ns.forEach((n,i)=>{const x=xS(n),y=yS(a.vals[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.stroke();
   });
+
+  // Legend
   algs.forEach((a,i)=>{
-    const lx=W-PAD.r+10,ly=22+i*34;
-    ctx.fillStyle=a.col;ctx.fillRect(lx,ly,14,3);
-    ctx.font='11px Arial, sans-serif';ctx.textAlign='left';ctx.fillText(a.lbl,lx+20,ly+4);
+    const lx=W-PAD.r+10,ly=24+i*36;
+    ctx.fillStyle=a.col;ctx.fillRect(lx,ly,18,3);
+    ctx.font='11px Arial, sans-serif';ctx.textAlign='left';ctx.fillStyle=a.col;
+    ctx.fillText(a.lbl,lx+24,ly+4);
   });
+
+  // Axis labels
   ctx.fillStyle='#7a9e88';ctx.font='11px Arial, sans-serif';ctx.textAlign='center';
-  ctx.fillText('n (number of jobs)',W/2,H-5);
+  for(let n=1;n<=maxN;n+=Math.max(1,Math.floor(maxN/8)))
+    ctx.fillText(n,xS(n),H-PAD.b+14);
+  ctx.fillText('n (number of jobs)',W/2,H-4);
+  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText('operations',0,0);ctx.restore();
 }
 
 /* ============================================================
