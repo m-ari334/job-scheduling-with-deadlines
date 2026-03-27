@@ -27,6 +27,7 @@
     <div class="section-label">Custom Input</div>
     <textarea id="inp" rows="5" placeholder="A,100,2&#10;B,19,1&#10;C,27,2&#10;D,25,1&#10;E,15,3"></textarea>
     <div class="hint">Format &nbsp;→&nbsp; Name, Profit, Deadline &nbsp;(one per line)</div>
+    <button class="btn" onclick="randomInput()" style="margin-top:10px;width:100%;justify-content:center;">🎲 Random Input</button>
   </div>
 
   <!-- Presets -->
@@ -190,12 +191,13 @@
     <canvas id="gc" class="chart-canvas" height="250"></canvas>
 
     <div class="divider"></div>
-    <div class="tab-sub" style="margin-bottom:13px">Comparison with Other Approaches</div>
+    <div class="tab-sub" style="margin-bottom:13px">Greedy vs Binary Search &amp; Divide and Conquer</div>
     <canvas id="cc" class="chart-canvas" height="210"></canvas>
     <div class="ibox pink" style="margin-top:14px">
-      <strong>vs Brute Force O(2ⁿ):</strong> Exponential — completely impractical beyond ~20 jobs.<br>
-      <strong>vs DP O(n log n):</strong> Weighted job scheduling DP is asymptotically similar but has higher constants and more complex implementation.<br>
-      <strong>vs Union-Find Greedy O(n log n):</strong> Optimal; reduces slot lookup to near-constant time.
+      <strong>Binary Search O(log n):</strong> Divide &amp; Conquer — splits the search space in half each step. Extremely fast for lookups, but cannot solve the scheduling optimisation problem on its own.<br>
+      <strong>D&amp;C Merge Sort O(n log n):</strong> Recursively divides the array and merges sorted halves. This is exactly the kind of sort that could power Step 1 of our algorithm — stable and predictable.<br>
+      <strong>D&amp;C Quick Sort O(n log n) avg:</strong> Partitions around a pivot — fast in practice, but O(n²) worst case. Less predictable than merge sort for sorting jobs.<br>
+      <strong>Key insight:</strong> Our greedy algorithm <em>uses</em> Divide &amp; Conquer sorting (Step 1) as a subroutine, then applies greedy slot assignment (Steps 2–4). The two paradigms complement each other.
     </div>
   </div>
 
