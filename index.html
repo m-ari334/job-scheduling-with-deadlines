@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Scheduling with Deadlines</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="hdr-title">Job Scheduling with Deadlines</div>
+    <div class="hdr-sub">Greedy Algorithm &nbsp;·&nbsp; By Mariam Hamouda 20230003280 </div>
+  </div>
+  <div class="hdr-badge">BCS 309 · Algorithms I</div>
+</header>
+
+<div class="layout">
+
+<!-- ══════════════ LEFT PANEL ══════════════ -->
+<div class="left">
+
+  <!-- Custom input -->
+  <div class="section-card">
+    <div class="section-label">Custom Input</div>
+    <textarea id="inp" rows="5" placeholder="A,100,2&#10;B,19,1&#10;C,27,2&#10;D,25,1&#10;E,15,3"></textarea>
+    <div class="hint">Format &nbsp;→&nbsp; Name, Profit, Deadline &nbsp;(one per line)</div>
+    <button class="btn" onclick="randomInput()" style="margin-top:10px;width:100%;justify-content:center;">🎲 Random Input</button>
+  </div>
+
+  <!-- Presets -->
+  <div class="section-card">
+    <div class="section-label">Presets</div>
+    <div class="presets">
+      <button class="preset-btn" onclick="loadPreset(0)">📌 Classic (5 jobs)</button>
+      <button class="preset-btn" onclick="loadPreset(1)">⚠ Worst Case</button>
+      <button class="preset-btn" onclick="loadPreset(2)">✅ All Fit</button>
+      <button class="preset-btn" onclick="loadPreset(3)">🔥 Tight Deadlines</button>
+    </div>
+  </div>
+
+  <!-- Speed -->
+  <div class="section-card">
+    <div class="section-label">Animation Speed</div>
+    <div class="speed-row">
+      <label>Speed</label>
+      <input type="range" id="spd" min="1" max="8" value="4" oninput="updSpd()">
+      <span class="speed-val" id="spd-lbl">1×</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="section-card">
+    <div class="section-label">Playback</div>
+    <div class="controls">
+      <button class="btn primary" id="btn-build" onclick="buildSteps()">⚙ Build Steps</button>
+      <button class="btn" id="btn-step"  onclick="stepFwd()"  disabled>▶ Step</button>
+      <button class="btn" id="btn-play"  onclick="playAnim()" disabled>▶ Play</button>
+      <button class="btn" id="btn-pause" onclick="pauseAnim()" disabled>⏸ Pause</button>
+      <button class="btn" id="btn-reset" onclick="resetAll()">↺ Reset</button>
+    </div>
+    <div class="status-row">
+      <span class="step-counter" id="sc">Step 0 / 0</span>
+      <span class="status-pill st-idle" id="status">Idle</span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section-card">
+    <div class="section-label">Live Statistics</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-val" id="s-comp">0</div>
+        <div class="stat-lbl">Comparisons</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="s-asgn">0</div>
+        <div class="stat-lbl">Assignments</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val pink" id="s-prof">0</div>
+        <div class="stat-lbl">Total Profit</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val pink" id="s-sched">0</div>
+        <div class="stat-lbl">Jobs Scheduled</div>
+      </div>
+    </div>
+  </div>
+
+
+</div><!-- /left -->
+
+
+<!-- ══════════════ RIGHT PANEL ══════════════ -->
+<div class="right">
+  <div class="tabs">
+    <div class="tab active"  onclick="showTab('viz',this)">Visualization</div>
+    <div class="tab"         onclick="showTab('pseudo',this)">Pseudocode</div>
+    <div class="tab"         onclick="showTab('cplx',this)">Complexity Analysis</div>
+    <div class="tab"         onclick="showTab('sort',this)">Sorting &amp; Search</div>
+    <div class="tab"         onclick="showTab('greedy',this)">Greedy Strategy</div>
+    <div class="tab"         onclick="showTab('about',this)">Overview</div>
+  </div>
+
+  <!-- ── VISUALIZATION ── -->
+  <div class="tcontent active" id="tab-viz">
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="border-color:var(--pink);background:rgba(244,114,182,0.25)"></div>Considering</div>
+      <div class="leg-item"><div class="leg-dot" style="border-color:var(--green-hi);background:var(--green-soft)"></div>Scheduled</div>
+      <div class="leg-item"><div class="leg-dot" style="border-color:var(--red);background:rgba(248,113,113,0.1)"></div>Skipped</div>
+      <div class="leg-item"><div class="leg-dot" style="border-color:var(--border);background:var(--bg3)"></div>Pending</div>
+      <div class="leg-item"><div class="leg-dot" style="border-color:var(--pink);background:var(--pink-dim)"></div>Slot target</div>
+    </div>
+
+    <div class="jobs-label">Jobs — sorted by profit (descending)</div>
+    <div class="jobs-row" id="jobs-row"></div>
+
+    <div class="timeline-label">Timeline Slots</div>
+    <div class="timeline" id="tline"></div>
+
+    <div class="viz-bottom-grid">
+      <!-- What's Happening -->
+      <div class="section-card" style="margin-top:0">
+        <div class="section-label">What's Happening</div>
+        <div class="step-box" id="exp">Press <strong>Build Steps</strong> to begin the walkthrough.</div>
+      </div>
+
+      <!-- Step History -->
+      <div class="section-card" style="margin-top:0">
+        <div class="section-label">Step History &nbsp;<span style="font-size:0.62rem;color:var(--white4)">(click to jump)</span></div>
+        <div class="hist-wrap">
+          <table id="hist-tbl">
+            <thead><tr><th>#</th><th>Job</th><th>Profit</th><th>Slot</th><th>Result</th></tr></thead>
+            <tbody id="hist-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-viz -->
+
+  <!-- ── PSEUDOCODE ── -->
+  <div class="tcontent" id="tab-pseudo">
+    <div class="tab-heading">Algorithm Pseudocode</div>
+    <div class="tab-sub">Hover any line for an explanation tooltip. Active line tracks the animation.</div>
+    <div class="pseudo-wrap" id="pseudo"></div>
+  </div>
+
+  <!-- ── COMPLEXITY ANALYSIS ── -->
+  <div class="tcontent" id="tab-cplx">
+    <div class="tab-heading">Complexity Analysis</div>
+    <div class="tab-sub">Time &amp; space complexity, operation counters, and growth curves.</div>
+
+    <div class="cplx-row">
+      <div class="cplx-card best">
+        <div class="cplx-case">Best Case</div>
+        <div class="cplx-val">O(n log n)</div>
+        <div class="cplx-desc">All slots filled immediately — sort dominates</div>
+      </div>
+      <div class="cplx-card avg">
+        <div class="cplx-case">Average Case</div>
+        <div class="cplx-val">O(n²)</div>
+        <div class="cplx-desc">Slot-search loop dominates on average</div>
+      </div>
+      <div class="cplx-card worst">
+        <div class="cplx-case">Worst Case</div>
+        <div class="cplx-val">O(n²)</div>
+        <div class="cplx-desc">All deadlines = max, max slot scanning</div>
+      </div>
+    </div>
+
+    <div class="ibox green">
+      <strong>Space Complexity: O(n)</strong> — We store one schedule array of size equal to the maximum deadline, plus the sorted jobs list.
+    </div>
+    <div class="ibox orange">
+      <strong>Phase breakdown:</strong> Sorting n jobs costs O(n log n). For each job we scan backwards through slots — worst case O(n) per job → <strong>O(n²) overall</strong>. Using a Union-Find structure reduces slot lookup to O(α(n)) ≈ O(1), giving O(n log n) total.
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="tab-sub" style="margin-bottom:13px">Growth Curves — Operations vs Input Size</div>
+    <div class="gctrls">
+      <label>Max n = <span id="gn-lbl">20</span></label>
+      <input type="range" id="gn" min="5" max="50" value="20" oninput="drawGrowth()">
+      <label><input type="checkbox" id="cb-n" checked onchange="drawGrowth()"> &nbsp;n</label>
+      <label><input type="checkbox" id="cb-nl" checked onchange="drawGrowth()"> &nbsp;n log n</label>
+      <label><input type="checkbox" id="cb-n2" checked onchange="drawGrowth()"> &nbsp;n²</label>
+    </div>
+    <canvas id="gc" class="chart-canvas" height="250"></canvas>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:13px">Greedy vs Binary Search &amp; Divide and Conquer</div>
+    <canvas id="cc" class="chart-canvas" height="210"></canvas>
+    <div class="ibox pink" style="margin-top:14px">
+      <strong>Binary Search O(log n):</strong> Divide &amp; Conquer — splits the search space in half each step. Extremely fast for lookups, but cannot solve the scheduling optimisation problem on its own.<br>
+      <strong>D&amp;C Merge Sort O(n log n):</strong> Recursively divides the array and merges sorted halves. This is exactly the kind of sort that could power Step 1 of our algorithm — stable and predictable.<br>
+      <strong>D&amp;C Quick Sort O(n log n) avg:</strong> Partitions around a pivot — fast in practice, but O(n²) worst case. Less predictable than merge sort for sorting jobs.<br>
+      <strong>Key insight:</strong> Our greedy algorithm <em>uses</em> Divide &amp; Conquer sorting (Step 1) as a subroutine, then applies greedy slot assignment (Steps 2–4). The two paradigms complement each other.
+    </div>
+  </div>
+
+  <!-- ── SORTING & SEARCH ── -->
+  <div class="tcontent" id="tab-sort">
+    <div class="tab-heading">Sorting &amp; Searching</div>
+    <div class="tab-sub">How sorting by profit and slot-search work inside the algorithm.</div>
+
+    <div class="ibox green">
+      <strong>Why sort first?</strong> The greedy algorithm's correctness depends entirely on processing jobs in decreasing profit order. Without sorting, a low-profit job can occupy a slot needed by a higher-profit job, making the result suboptimal.
+    </div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Sorting Animation — profit descending</div>
+    <canvas id="sc-cvs" class="chart-canvas" height="190"></canvas>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" onclick="animSort()">▶ Play</button>
+      <button class="btn" onclick="sortStep()">▶ Step</button>
+      <button class="btn" onclick="pauseSort()">⏸ Pause</button>
+      <button class="btn" onclick="resetSort()">↺ Reset</button>
+      <span id="sort-sc" style="font-family:Arial,sans-serif;font-size:0.75rem;color:var(--white3);margin-left:4px">Step 0 / 0</span>
+    </div>
+    <div class="ibox orange" id="sort-box" style="margin-top:12px">Press "Animate Sort" to watch jobs re-order by profit.</div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Impact of Removing the Sort Step</div>
+    <div id="no-sort-demo"></div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Slot Search — Latest Available Slot</div>
+    <div class="ibox orange">
+      <strong>Why the latest slot?</strong> Assigning to the <em>latest</em> free slot before the deadline keeps earlier slots open for future jobs with tighter deadlines — this is the crucial greedy insight.
+    </div>
+    <canvas id="ss-cvs" class="chart-canvas" height="170"></canvas>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" onclick="animSearch()">▶ Show Slot Search</button>
+    </div>
+    <div class="ibox pink" id="search-box" style="margin-top:10px">Click above to see the backwards slot scan in action.</div>
+  </div>
+
+  <!-- ── GREEDY STRATEGY ── -->
+  <div class="tcontent" id="tab-greedy">
+    <div class="tab-heading">Greedy Strategy</div>
+    <div class="tab-sub">How the greedy paradigm applies, why it works, and where it fails.</div>
+
+    <div class="ibox pink">
+      <strong>Paradigm: Greedy.</strong> At each step, choose the remaining job with the highest profit and assign it to the latest available slot before its deadline. Once a decision is made, it is never reconsidered.
+    </div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Greedy Choices — Classic Example</div>
+    <div class="gchoice-wrap" id="gchoices"></div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Why Does Greedy Work? (Exchange Argument)</div>
+    <div class="ibox green">
+      <strong>Exchange argument:</strong> Suppose an optimal solution doesn't schedule the highest-profit feasible job first. We can always swap in that job without decreasing total profit. By repeating this argument for every position, the greedy order produces an optimal schedule.
+    </div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Counterexample — Earliest Deadline First (Wrong!)</div>
+    <div id="counter-ex"></div>
+    <div class="ibox red" style="margin-top:12px">
+      <strong>EDF fails here:</strong> Sorting by earliest deadline ignores profit entirely. A low-value job with a tight deadline fills a slot that could have held a high-value job, reducing total profit.
+    </div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:10px">Key Concepts</div>
+    <div class="kc-grid">
+      <div class="kc">
+        <h4>Greedy Choice Property</h4>
+        <p>A globally optimal solution can be assembled from locally optimal (greedy) choices. Here: always pick the highest-profit available job.</p>
+      </div>
+      <div class="kc">
+        <h4>Optimal Substructure</h4>
+        <p>After placing one job, the remaining scheduling problem has the same structure and can be solved optimally by the same greedy rule.</p>
+      </div>
+      <div class="kc">
+        <h4>Common Mistake</h4>
+        <p>Assigning to the earliest free slot instead of the latest. This wastes scheduling flexibility and leads to suboptimal results.</p>
+      </div>
+      <div class="kc">
+        <h4>Feasibility Check</h4>
+        <p>A job is feasible only if at least one slot ≤ its deadline is free. If none exists, the job must be skipped regardless of profit.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <div class="tcontent" id="tab-about">
+    <div class="tab-heading">Algorithm Overview</div>
+    <div class="tab-sub">What the problem is, how the algorithm works, and a fully worked example.</div>
+
+    <div class="coll-hdr" onclick="togColl('aw')">
+      <h3>What is the problem?</h3>
+      <span class="coll-arr" id="arr-aw">▼</span>
+    </div>
+    <div class="coll-body" id="cb-aw">
+      Given <strong>n jobs</strong>, each with a <strong>profit pᵢ</strong> and a <strong>deadline dᵢ</strong> (each job takes exactly 1 time unit), schedule a subset to <strong>maximise total profit</strong>. Each job must complete by its deadline; only one job can run per time slot.<br><br>
+      <strong>Input:</strong> List of (name, profit, deadline) triples.<br>
+      <strong>Output:</strong> Subset of jobs + assigned slots, maximising total profit.
+    </div>
+
+    <div class="coll-hdr" onclick="togColl('ah')">
+      <h3>How does the algorithm work?</h3>
+      <span class="coll-arr" id="arr-ah">▼</span>
+    </div>
+    <div class="coll-body" id="cb-ah">
+      <strong>1.</strong> Sort all jobs by profit (descending) in O(n log n).<br>
+      <strong>2.</strong> Create a slots array of size = max deadline (all empty).<br>
+      <strong>3.</strong> For each job (in sorted order):<br>
+      &nbsp;&nbsp;&nbsp;• Scan backwards from deadline to slot 1.<br>
+      &nbsp;&nbsp;&nbsp;• If a free slot is found → assign the job there.<br>
+      &nbsp;&nbsp;&nbsp;• If none found → skip the job.<br>
+      <strong>4.</strong> Return the filled slots as the optimal schedule.
+    </div>
+
+    <div class="coll-hdr" onclick="togColl('au')">
+      <h3>When should you use this algorithm?</h3>
+      <span class="coll-arr" id="arr-au">▼</span>
+    </div>
+    <div class="coll-body" id="cb-au">
+      Use this algorithm when:<br>
+      • Each task takes exactly <strong>one unit of time</strong>.<br>
+      • Each task has a hard <strong>deadline</strong>.<br>
+      • You want to <strong>maximise total profit / reward</strong>.<br>
+      • Tasks can be <strong>skipped</strong> if infeasible.<br><br>
+      Real-world analogies: CPU job scheduling, task prioritisation, project bidding.
+    </div>
+
+    <div class="divider"></div>
+    <div class="tab-sub" style="margin-bottom:14px">Fully Worked Example</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:18px" id="worked"></div>
+  </div>
+
+</div><!-- /right -->
+</div><!-- /layout -->
+
+<script src="script.js"></script>
+</body>
+</html>
